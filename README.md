@@ -1,2 +1,2 @@
 # AgenticAI-with-MCP
-Code repository for my first Agentic AI using the Model Context Protocol (MCP)
+Code repository for an Agentic AI, consisting of an LLM with access to tools, prompts and resources, through the Model Context Protocol (MCP).
