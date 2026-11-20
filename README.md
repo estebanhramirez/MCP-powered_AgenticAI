@@ -13,7 +13,7 @@ If we would like to construct an indexing system (which is) capable of retrievin
 
 This is why we use the recipe names as `chromadb.documents` (since this is what we want to ultimately retrieve) and the embeddings of the images of dishes as `chromadb.embeddings` (since this is what we want the system to use to perform similarity search).
 
-Now, in order for our system to be able to provide an explanation of why the output recipe produces something similar to what is shown in the photo, we must provide the synthetizer LLM with a textual description of the output recipe, as well as a textual description of the input photo.
+Now, in order for our system to be able to provide an explanation of why the output recipe produces something similar to what is shown in the photo, we must provide the synthetizer LLM with a textual description of the output recipe, as well as a textual description of the input photo. The LLM must use these descriptions to compare both results in terms of ingredients, looks, and colors.
 
 We store alongside each record in the vector index metadata, such as "cuisine type", "ingredients" and "cooking time", to enable constrained retrieval throught filtering, in addition to similarity search.
 
