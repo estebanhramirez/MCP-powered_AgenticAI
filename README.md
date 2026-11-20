@@ -2,7 +2,7 @@
 Code repository for an Agentic AI, consisting of an LLM with access to tools, prompts and resources, through the Model Context Protocol (MCP).
 <br>
 
-Particularly, we implement a (multimodal - image-oriented) RAG workflow that recommends recipes to users, based on a given photo (image) of the dish that the user would like to replicate. This system returns the recipe that produces the dish that looks the most similar to the dish in the photo. The output recipe contains ingredients, cooking instructions, cooking time, among other information. We feed this information to an (open-source) LLM that synthetizes it, and provides a clear user-friendly step-by-step guide on how to cook something the most similar to what is shown in the photo.
+Particularly, we implement a (multimodal - image-oriented) RAG workflow that recommends recipes to users, based on a given photo (image) of the dish that the user would like to replicate. This system returns the recipe that produces the dish that looks the most similar to the dish in the photo[^1]. The output recipe contains ingredients, cooking instructions, cooking time, among other information. We feed this information to an (open-source) LLM that synthetizes it, and provides a clear user-friendly step-by-step guide on how to cook something the most similar to what is shown in the photo.
 
 This system tries to provide a recipe that results in the exact desired result. However, when it is not possible to provide the exact same recipe, the system will explain why the output recipe produces a dish that might result in what the user wants: for example, the recipe uses the same ingredients that are shown in the picture, or have the same preparation method.
 <br>
@@ -16,6 +16,8 @@ This is why we use the recipe names as `chromadb.documents` (since this is what 
 Now, in order for our system to be able to provide an explanation of why the output recipe produces something similar to what is shown in the photo, we must provide the synthetizer LLM with a textual description of the output recipe, as well as a textual description of the input photo. The LLM must use these descriptions to compare both results in terms of ingredients, looks, and colors (in general, in terms of the elements that can be seen in the image, and which characterize it).
 
 We store alongside each record in the vector index metadata, such as "cuisine type", "ingredients" and "cooking time", to enable constrained retrieval throught filtering, in addition to similarity search.
+
+[^1]: Our system retrieves recipes from a pre-determined database of recipes. This database can be manually extended by adding new recipes. In the future, I am planning on creating and agent that searches recipes online and updates the database automatically.
 
 # Appendix
 Repository with the Python code used for implementing a Multimodal (AI-powered) recommendation system.
