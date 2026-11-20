@@ -7,7 +7,7 @@ Particularly, we implement a (multimodal - image-oriented) RAG workflow that rec
 
 Recipes consist of a list of `ingredients`, `instructions`, among other information, which includes an image of the resulting dish produced by following each recipe.
 
-If we would like to construct an indexing system (which is) capable of retrieving the recipe that produces the dish that "looks" the most similar to a given photo, then our indexing system must use the images of the dishes to compare recipes.
+If we would like to construct an indexing system (which is) capable of retrieving the recipe that produces the dish that "looks" the most similar to a given photo, then our indexing system must store the `ingredients`, `instructions` and other useful information about recipes, but specifically use the images of the dishes to compare recipes.
 
 This is why we use the recipe names as `chromadb.documents` (since this is what we want to ultimately retrieve) and the embeddings of the images of dishes as `chromadb.embeddings` (since this is what we want the system to use to perform similarity search).
 
