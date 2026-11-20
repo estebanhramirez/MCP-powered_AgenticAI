@@ -2,7 +2,6 @@
 # Imports
 # ==========================================================================================================
 
-import asyncio
 import logging
 import sys
 
@@ -149,4 +148,3 @@ class MCPHTTPClient:
     async def cleanup(self):
         """Clean up resources and close HTTP connection."""
         await self.exit_stack.aclose()
-
