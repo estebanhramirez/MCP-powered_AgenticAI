@@ -7,6 +7,7 @@ import torch
 import numpy as np
 
 from fastmcp import FastMCP
+from langchain_chroma import Chroma
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
 
@@ -50,8 +51,19 @@ def embed_images(paths, batch_size=16):
 # Helper functions
 # ==========================================================================================================
 
-# Chroma returns lists-of-lists; unwrap the first query.
-def _unwrap(res: dict):  
+def _unwrap(res: dict):
+    """
+        Parse the output of Chromadb.retrieve:
+        Chroma returns lists-of-lists; unwrap the first query.
+
+        Args:
+            res (dict): raw result from invoking Chromadb.retrieve().
+        Returns:
+            List[str]: ids
+            List[str]: docs
+            List[Dict]: metas
+            List[float]: dists
+    """
     ids = res.get("ids", [[]])[0]
     docs = res.get("documents", [[]])[0]
     metas = res.get("metadatas", [[]])[0]
@@ -65,26 +77,27 @@ def _unwrap(res: dict):
 # ==========================================================================================================
 
 @server.tool()
-def retrieve_images_by_image(chromadb, query_image_path: str, k: int = 5, where: dict | None = None):
+def retrieve_images_by_image(chromadb_dir: str, query_image_path: str, k: int = 5, where: dict | None = None):
     """
     Function to retrieve similar images from the image database based on a query image,
     with optional metadata filtering.
 
     Args:
-        query_image_path: str
-            The file path to the query image.
-        k: int
-            The number of top results to return.
-        where: dict | None
-            Optional metadata filtering conditions. For example:
-                where = {"cuisine": "Italian"}
-            If None, no filtering is applied.
+        chromadb_dir (str): the path to the database.
+        query_image_path (str): the file path to the query image.
+        k (int): the number of top results to return.
+        where (dict | None): Optional metadata filtering conditions. For example: where = {"cuisine": "Italian"}. If None, no filtering is applied.
     Returns:
         List[str]: ids
         List[str]: docs
         List[Dict]: metas
         List[float]: dists
     """
+
+    chromadb = Chroma(
+        collection_name="food_images",
+        persist_directory=chromadb_dir,
+    )
 
     q_vec = embed_images([query_image_path])[0]  # 512-d, cosine-ready
 
@@ -103,6 +116,8 @@ def retrieve_images_by_image(chromadb, query_image_path: str, k: int = 5, where:
 # Entry point
 # ==========================================================================================================
 
-# Run the Server in STDIO mode
+# Run the Server with HTTP transport
 if __name__ == "__main__":
-    server.run_http_async(port=8080)
+    print("Starting HTTP MCP Server on http://127.0.0.1:8080")
+
+    server.run(transport="http", host="127.0.0.1", port=8080)
