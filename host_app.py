@@ -5,10 +5,82 @@
 import sys
 import json
 import gradio as gr
+import requests
 
 from classes.base_mcp_clients import MCPHTTPClient
 
 
+
+# ==========================================================================================================
+# Helper functions
+# ==========================================================================================================
+
+def _unwrap(res: dict):
+    """Chroma returns lists-of-lists; unwrap the first query."""
+    ids   = res.get("ids", [[]])[0]
+    docs  = res.get("documents", [[]])[0]
+    metas = res.get("metadatas", [[]])[0]
+    dists = res.get("distances", [[]])[0]
+    return ids, docs, metas, dists
+
+
+def unwrap_response(response):
+    """
+    Function to unwrap the response from the Ollama server and extract the content from the streamed JSON lines.
+
+    Args:
+        response (requests.Response): The response object from the Ollama server.
+    Returns:
+        str: The final response content extracted from the streamed JSON lines.
+    """
+
+    if response.status_code == 200:
+        final_response = ""
+        for line in response.iter_lines(decode_unicode=True):
+            if line:
+                try:
+                    json_data = json.loads(line)
+                    if "message" in json_data and "content" in json_data["message"]:
+                        content = json_data["message"]["content"]
+                        final_response += content
+                except json.JSONDecodeError:
+                    print(f"Error decoding JSON from line: {line}")
+        return(final_response)
+    else:
+        return(f"Request failed with status code: {response.status_code}")
+
+
+# Textual LLM
+def call_llm(user_prompt: str) -> str:
+    """
+        Function to send a model execution request to the Ollama server running locally through port 11434,
+        and receive and stream the response from the model.
+    
+        Args:
+            system_msg (str): The system message to provide context for the LLM.
+            user_prompt (str): The user prompt containing the task and input data.
+    
+        Returns:
+            str: The final response from the LLM after processing the input.
+    """
+
+    url = "http://127.0.0.1:11434/api/chat"
+
+    payload = {
+        "model": "phi4-mini:3.8b",
+        "messages": [ 
+            {"role": "user", "content": user_prompt}
+            ]
+    }
+
+    response = requests.post(url, json=payload, stream=True)
+
+    return unwrap_response(response)
+
+
+# ==========================================================================================================
+# Application
+# ==========================================================================================================
 
 class App():
     """GUI client application that extends the base HTTP client with Gradio interface."""
@@ -20,8 +92,7 @@ class App():
         self.tools_cache = []
         self.prompts_cache = []
 
-        # For lazy initialization
-        self.client = None
+        self.client = None # For lazy initialization
 
     async def gui_list_tools(self):
         self.client = MCPHTTPClient(server_url=self.server_url, roots_dir=self.roots_dir)
@@ -118,6 +189,29 @@ class App():
         except Exception as e:
             return f"Error: {e}"
 
+    async def get_recipe_from_photo(self, arguments_json):
+        self.client = MCPHTTPClient(server_url=self.server_url, roots_dir=self.roots_dir)
+        await self.client.connect()
+
+        args = json.loads(arguments_json) if arguments_json else {}
+        chromadb_result = await self.client.call_tool(
+            "retrieve_images_by_image",
+            args #{"chromadb_dir": "chroma_multimodal", "query_image_path": "./query_image.jpeg", "k": 3}
+        )
+
+        output_recipe = ""
+        for content in chromadb_result.content:
+            if hasattr(content, 'text'):
+                output_recipe += content.text + "\n"
+
+        user_prompt = f"""
+            Provide step-by-step instructions to complete the following recipe: {output_recipe}
+        """
+        llm_result = call_llm(user_prompt=user_prompt)
+
+        return (llm_result)
+
+
     def create_interface(self):
         """Create the Gradio interface."""
 
@@ -132,6 +226,23 @@ class App():
             """)
 
             with gr.Tabs():
+                with gr.Tab("Agentic workflow"):
+                    gr.Markdown("Instructions to replicate your image.")
+                    with gr.Row():
+                        with gr.Column():
+                            tool_args = gr.Textbox(
+                                label="Arguments (JSON)",
+                                placeholder='{"filepath": "test.txt"}',
+                                lines=3
+                            )
+                            call_tool_btn = gr.Button("Send image", variant="primary")
+                            tool_result = gr.Textbox(label="Step-by-step recipe", lines=8)
+
+                    call_tool_btn.click(
+                        fn=self.get_recipe_from_photo,
+                        inputs=[tool_args],
+                        outputs=tool_result
+                    )
                 with gr.Tab("Tools"):
                     gr.Markdown("### Discover and Execute Server Tools")
                     with gr.Row():
@@ -218,6 +329,10 @@ class App():
         return interface
 
 
+
+# ==========================================================================================================
+# Beginning of execution
+# ==========================================================================================================
 
 def main():
     if len(sys.argv) < 3:
